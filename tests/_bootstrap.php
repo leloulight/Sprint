@@ -1,12 +1,9 @@
 <?php
 // This is global bootstrap for autoloading
 
-// Include our Composer autoloader so we can
-// get to our myth/* files
-include 'src/vendor/autoload.php';
+// Set the environment variable so we know that we're in test mode
+putenv('TESTING=true');
 
-// Tell CI to shutup about the BASEPATH
-define('BASEPATH', true);
+require_once dirname(__FILE__) .'/MythTester.php';
 
-function log_message() {}
-
+require_once dirname(__FILE__) .'/CodeIgniterTestCase.php';

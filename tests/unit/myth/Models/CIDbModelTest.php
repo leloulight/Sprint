@@ -36,8 +36,6 @@ class CIDbModelTest extends \Codeception\TestCase\Test
 
     protected function _after()
     {
-        m::close();
-
         if (isset($this->model))
         {
             unset($this->model);
@@ -311,10 +309,11 @@ class CIDbModelTest extends \Codeception\TestCase\Test
 
     public function testInsertWithReturnInsertId()
     {
-        $data = [ 'some data' ];
+        $data = [ 'email' => 'some data' ];
 
         $this->model->db->shouldReceive('insert')->once()->with('records_table', $data)->andReturn( true );
         $this->model->db->shouldReceive('insert_id')->once()->andReturn(11);
+        $this->model->db->shouldReceive('list_fields')->once()->andReturn( ['email'] );
 
         $obj = $this->model->insert($data);
         $this->assertEquals($obj, 11);
@@ -324,12 +323,13 @@ class CIDbModelTest extends \Codeception\TestCase\Test
 
     public function testInsertWithNoReturnInsertId()
     {
-        $data = [ 'some data' ];
+        $data = [ 'email' => 'some data' ];
 
         $this->model->return_insert_id(false);
 
         $this->model->db->shouldReceive('insert')->once()->with('records_table', $data)->andReturn( true );
         $this->model->db->shouldReceive('insert_id')->never();
+        $this->model->db->shouldReceive('list_fields')->once()->andReturn( ['email'] );
 
         $obj = $this->model->insert($data);
         $this->assertEquals($obj, true);
@@ -351,10 +351,11 @@ class CIDbModelTest extends \Codeception\TestCase\Test
 
     public function testReplace()
     {
-        $data = [ 'some data' ];
+        $data = [ 'email' => 'some data' ];
 
         $this->model->db->shouldReceive('replace')->once()->with('records_table', $data)->andReturn( true );
         $this->model->db->shouldReceive('insert_id')->once()->andReturn(11);
+        $this->model->db->shouldReceive('list_fields')->once()->andReturn( ['email'] );
 
         $obj = $this->model->replace($data);
         $this->assertEquals($obj, 11);
@@ -364,11 +365,12 @@ class CIDbModelTest extends \Codeception\TestCase\Test
 
     public function testUpdateReturnsTrueOnSuccess()
     {
-        $data = [ 'some data' ];
+        $data = [ 'email' => 'some data' ];
 
         $this->model->db->shouldReceive('where')->once()->with('id', 1)->andReturn( $this->model->db );
         $this->model->db->shouldReceive('set')->once()->with($data)->andReturn( $this->model->db );
         $this->model->db->shouldReceive('update')->once()->andReturn( true );
+        $this->model->db->shouldReceive('list_fields')->once()->andReturn( ['email'] );
 
         $obj = $this->model->update(1, $data);
         $this->assertTrue($obj);
@@ -420,11 +422,12 @@ class CIDbModelTest extends \Codeception\TestCase\Test
 
     public function testUpdateByReturnsTrueOnSuccess()
     {
-        $data = [ 'some_data' ];
+        $data = [ 'email' => 'some_data' ];
 
         $this->model->db->shouldReceive('where')->once()->with('name', 'Darth')->andReturn( $this->model->db );
         $this->model->db->shouldReceive('set')->once()->with($data)->andReturn( $this->model->db );
         $this->model->db->shouldReceive('update')->once()->with('records_table')->andReturn(true);
+        $this->model->db->shouldReceive('list_fields')->once()->andReturn( ['email'] );
 
         $obj = $this->model->update_by('name', 'Darth', $data);
         $this->assertTrue($obj);
@@ -434,11 +437,12 @@ class CIDbModelTest extends \Codeception\TestCase\Test
 
     public function testUpdateAll()
     {
-        $data = [ 'some_data' ];
+        $data = [ 'email' => 'some_data' ];
 
         $this->model->db->shouldReceive('where')->never();
         $this->model->db->shouldReceive('set')->once()->with($data)->andReturn( $this->model->db );
         $this->model->db->shouldReceive('update')->once()->with('records_table')->andReturn(true);
+        $this->model->db->shouldReceive('list_fields')->once()->andReturn( ['email'] );
 
         $obj = $this->model->update_all($data);
         $this->assertTrue($obj);
@@ -535,18 +539,6 @@ class CIDbModelTest extends \Codeception\TestCase\Test
 
     //--------------------------------------------------------------------
 
-    public function testFindAsJson()
-    {
-        $this->model->db->shouldReceive('where')->once()->with('id', 1)->andReturn( $this->model->db );
-        $this->model->db->shouldReceive('get')->once()->with('records_table')->andReturn( $this->model->db );
-        $this->model->db->shouldReceive('row_array')->once()->andReturn('fake object');
-
-        $obj = $this->model->as_json()->find(1);
-        $this->assertEquals( json_encode('fake object'), $obj );
-    }
-
-    //--------------------------------------------------------------------
-
     public function testFindAllAsObject()
     {
         $this->model->db->shouldReceive('get')->once()->with('records_table')->andReturn( $this->model->db );
@@ -565,17 +557,6 @@ class CIDbModelTest extends \Codeception\TestCase\Test
 
         $obj = $this->model->as_array()->find_all();
         $this->assertEquals( 'fake object', $obj );
-    }
-
-    //--------------------------------------------------------------------
-
-    public function testFindAllAsJson()
-    {
-        $this->model->db->shouldReceive('get')->once()->with('records_table')->andReturn( $this->model->db );
-        $this->model->db->shouldReceive('result_array')->once()->andReturn('fake object');
-
-        $obj = $this->model->as_json()->find_all();
-        $this->assertEquals( json_encode('fake object'), $obj );
     }
 
     //--------------------------------------------------------------------
@@ -710,14 +691,16 @@ class CIDbModelTest extends \Codeception\TestCase\Test
 
     public function testInsertRunsValidation()
     {
-        $data = [ 'some data' ];
+        $data = [ 'email' => 'some data' ];
 
         $this->model->return_insert_id(false);
 
         $this->model->db->shouldReceive('insert')->once()->with('records_table', $data)->andReturn( true );
         $this->model->db->shouldReceive('insert_id')->never();
         $this->model->form_validation->shouldReceive('set_rules')->once();
+        $this->model->form_validation->shouldReceive('set_data')->once();
         $this->model->form_validation->shouldReceive('run')->once()->andReturn(true);
+        $this->model->db->shouldReceive('list_fields')->once()->andReturn( ['email'] );
 
         $obj = $this->model->insert($data, false);
         $this->assertEquals($obj, true);
@@ -737,6 +720,7 @@ class CIDbModelTest extends \Codeception\TestCase\Test
 
         $this->model->db->shouldReceive('insert')->with('records_table', ['title' => 'MyTitle'])->once()->andReturn(true);
         $this->model->db->shouldReceive('insert_id')->once()->andReturn(5);
+        $this->model->db->shouldReceive('list_fields')->once()->andReturn( ['name', 'title'] );
 
         $id = $this->model->insert($data);
         $this->assertEquals($id, 5);
@@ -756,6 +740,28 @@ class CIDbModelTest extends \Codeception\TestCase\Test
     }
     
     //--------------------------------------------------------------------
+
+    public function testCreatedOnInsertsDate()
+    {
+        $this->model->set_created = true;
+
+        $data = array('name' => 'MyName', 'title' => 'MyTitle');
+        $expected = array('name' => 'MyName', 'title' => 'MyTitle', 'created_on' => date('Y-m-d H:i:s'));
+
+        $this->assertEquals($expected, $this->model->created_on(['method' => 'insert', 'fields' => $data]));
+    }
     
-    
+    //--------------------------------------------------------------------
+
+    public function testModifiedOnInsertsDate()
+    {
+        $this->model->set_modified = true;
+
+        $data = array('name' => 'MyName', 'title' => 'MyTitle');
+        $expected = array('name' => 'MyName', 'title' => 'MyTitle', 'modified_on' => date('Y-m-d H:i:s'));
+
+        $this->assertEquals($expected, $this->model->modified_on(['method' => 'insert', 'fields' => $data]));
+    }
+
+    //--------------------------------------------------------------------
 }
